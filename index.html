@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ISSight</title>
+  <link rel="icon"  href="medias/mhpbu8G.gif">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nova+Square&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/three"></script>
+  <script src="https://unpkg.com/globe.gl"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+    
+      background-color: #000000;
+      color: #f3f4f6;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    #globeViz {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    
+    .hud-header {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+      background: rgba(15, 211, 31, 0.999);
+      backdrop-filter: blur(12px);
+      padding: 14px 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.881);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      font-family: "Nova Square";
+      letter-spacing: 0.25em;
+      color: #fdfdfd;
+      text-transform: uppercase;
+    }
+    .hud-telemetry {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 10;
+      background: rgb(2, 172, 224);
+      backdrop-filter: blur(12px);
+      padding: 18px;
+      border-radius: 12px;
+      border: 1px solid #ffff;
+      width: 280px;
+      box-shadow: 0 8px 32px rgba(110, 78, 78, 0.5);
+    }
+
+    .hud-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #ffff;
+      margin-bottom: 12px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .metric-label {
+      font-size: 0.7rem;
+      color: #000000;
+    }
+
+    .metric-value {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #f8fafc;
+      font-family: monospace;
+    }
+
+    .controls-hint {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 10;
+      background: rgba(255, 145, 0, 0.951);
+      padding: 8px 14px;
+      border-radius: 20px;
+      border: 1px solid #ffff;
+      font-size: 0.75rem;
+      color: #ffffff;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="globeViz"></div>
+
+  <div class="hud-header">
+    <div class="live-dot"><span><img src="medias/cmvmKuo.gif"></span></div>
+    <h1>ISS Tracking</h1>
+  </div>
+
+  <div class="hud-telemetry">
+    <div class="hud-title"><h1><span><img src="medias/bHN3mnY.gif"></span><br>ISS-timates</h1></div>
+    <div class="grid">
+      <div>
+        <div class="metric-label">LATITUDE</div>
+        <div class="metric-value" id="lat">0.00°</div>
+      </div>
+      <div>
+        <div class="metric-label">LONGITUDE</div>
+        <div class="metric-value" id="lng">0.00°</div>
+      </div>
+      <div>
+        <div class="metric-label">ALTITUDE</div>
+        <div class="metric-value" id="alt">420 km</div>
+      </div>
+      <div>
+        <div class="metric-label">VELOCITY</div>
+        <div class="metric-value" id="vel">27,600 km/h</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls-hint">
+    Drag to rotate Globe and Scroll to Zoom
+  </div>
+
+  <script>
+    let world;
+    let issPosition = { lat: 0, lng: 0, alt: 0.15 };
+    let orbitPath = [];
+
+  
+    function init3DGlobe() {
+      world = Globe()
+        (document.getElementById('globeViz'))
+        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+        .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+        .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+        .showAtmosphere(true)
+        .atmosphereColor('#9065c2')
+        .atmosphereAltitude(0.25);
+
+    
+const customISSSVG = `
+  <div style="position: relative; display: flex; align-items: center; justify-content: center; transform: translate(-50%, -50%);">
+    <!-- Orbital Glow Aura -->
+    <div style="position: absolute; width: 48px; height: 48px; background: rgba(56, 189, 248, 0.25); border-radius: 50%; filter: blur(6px); animation: pulse 2s infinite;"></div>
+    
+    <!-- Custom ISS Silhouette SVG -->
+    <svg width="44" height="44" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 8px #38bdf8);">
+      <!-- Central Modules -->
+      <path d="M26 32H38M32 24V40" stroke="#ffa500" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="32" cy="32" r="4" fill="#0284c7" stroke="#ffff" stroke-width="1.5"/>
+      
+      <!-- Solar Array Trusses -->
+      <path d="M14 32H26M38 32H50" stroke="#ffa500" stroke-width="2"/>
+      
+      <!-- Left Solar Panels -->
+      <rect x="8" y="18" width="6" height="28" rx="1" fill="#020a5e" fill-opacity="0.8" stroke="#0284c7"/>
+      <rect x="16" y="18" width="6" height="28" rx="1" fill="#020a5e" fill-opacity="0.8" stroke="#0284c7"/>
+      
+      <!-- Right Solar Panels -->
+      <rect x="42" y="18" width="6" height="28" rx="1" fill="#020a5e" fill-opacity="0.8" stroke="#0284c7"/>
+      <rect x="50" y="18" width="6" height="28" rx="1" fill="#020a5e" fill-opacity="0.8" stroke="#0284c7"/>
+    </svg>
+  </div>
+`;
+
+
+world.htmlElementsData([issPosition])
+  .htmlElement(d => {
+    const el = document.createElement('div');
+    el.innerHTML = customISSSVG;
+    return el;
+  })
+  .htmlAltitude('alt');
+
+    
+      world.pointOfView({ lat: 20, lng: 0, altitude: 2.5 });
+    }
+
+    
+    function generateFull3DOrbit(currentLat, currentLng, vLat, vLng) {
+      const path = [];
+      const numSteps = 120;
+      const periodSec = 93 * 60; 
+
+      for (let i = 0; i <= numSteps; i++) {
+        const t = (i / numSteps) * periodSec;
+        
+        const projectedLat = currentLat + (vLat * (t / 120));
+        const projectedLng = currentLng + (vLng * (t / 120)) - (0.00416 * t);
+        const orbitalLat = 51.64 * Math.sin((projectedLat / 51.64) * (Math.PI / 2));
+
+        path.push({
+          lat: orbitalLat,
+          lng: projectedLng,
+          alt: 0.08 
+        });
+      }
+      return [path];
+    }
+
+    async function updateISS() {
+      try {
+        const response = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+        const data = await response.json();
+
+        const lat = parseFloat(data.latitude);
+        const lng = parseFloat(data.longitude);
+        const alt = Math.round(data.altitude);
+        const vel = Math.round(data.velocity);
+
+        
+        document.getElementById('lat').textContent = lat.toFixed(2) + '°';
+        document.getElementById('lng').textContent = lng.toFixed(2) + '°';
+        document.getElementById('alt').textContent = `${alt} km`;
+        document.getElementById('vel').textContent = `${vel.toLocaleString()} km/h`;
+
+        const relativeAlt = (alt / 6371) * 2; 
+        
+        issPosition = { lat: lat, lng: lng, alt: relativeAlt };
+        world.htmlElementsData([issPosition]);
+
+        const vLat = parseFloat(data.latitude_velocity || 1);
+        const vLng = parseFloat(data.longitude_velocity || 1);
+        const paths = generateFull3DOrbit(lat, lng, vLat, vLng);
+
+        world.pathsData(paths)
+          .pathPoints(d => d)
+          .pathPointLat(p => p.lat)
+          .pathPointLng(p => p.lng)
+          .pathPointAlt(p => p.alt)
+          .pathColor(() => '#ffff')
+          .pathStroke(2)
+          .pathDashLength(0.1)
+          .pathDashGap(0.02)
+          .pathDashAnimateTime(12000);
+
+      } catch (err) {
+        console.error("Failed to fetch ISS live position:", err);
+      }
+    }
+
+    window.onload = () => {
+      init3DGlobe();
+      updateISS();
+      setInterval(updateISS, 3000);
+    };
+  </script>
+</body>
+</html>
