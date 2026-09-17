@@ -1,6 +1,5 @@
 ## ISSight 
-
-Made a 3d live ISS tracker using external js libraries and used URL CDN endpoints hosted by the three-globe to make the earth look more real
+A browser-based ISS tracker where I used NASA's data and APIs to keep track of ISS! So basically, I made a 3d live ISS tracker using external js libraries and used URL CDN endpoints hosted by the three-globe to make the earth look more real!!
 
 Here is how it looks:
 
@@ -18,11 +17,14 @@ Here is how it looks:
 
 #APIs Used:
 
-Where The ISS At API (Live ISS coordinates, speed, & altitude)
+>Where The ISS At API (Live ISS coordinates, speed, & altitude)
 
-Open-Notify / Corridors Astros API (Current astronauts in space)
+>Open-Notify / Corridors Astros API (Current astronauts in space)
 
-NASA Live Earth Views Video Stream
+>NASA Live Earth Views Video Stream
 
 ## RUNNING LOCALLY:
 To run locally,use the github-pages link in description!
+
+## Credits
+This project is open source and available for free. Built with plain HTML, CSS,JavaScript also used some external JS libraries
